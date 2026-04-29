@@ -1,36 +1,49 @@
 # Databricks notebook source
-import urllib.request 
-import shutil 
+import sys
 import os
+# Go two levels up to reach the project root
+project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
+
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+import urllib.request
+import shutil
 from datetime import datetime
 from datetime import date, datetime, timezone
 from dateutil.relativedelta import relativedelta
+from modules.utils.date_utils import get_target_yyyymm
+from modules.data_loader.file_downloader import download_file
 
+# Obtains the year-month for 2 months prior to the current month in yyyy-MM format
+formatted_date = get_target_yyyymm(2)
 
-#obtain the year-month for 2 months prior to the current month in yy-mm format
-two_month_ago = date.today() - relativedelta(months=2)
-formatted_date = two_month_ago.strftime("%Y-%m")
-
-#define the local directloru for this dates data
+# Define the local directory for this date's data
 dir_path = f"/Volumes/nyctaxi/00_landing/data_sources/nyctaxi_yellow/{formatted_date}"
 
-#define the full path for the downloaded file 
+# Define the full path for the downloaded file
 local_path = f"{dir_path}/yellow_tripdata_{formatted_date}.parquet"
 
-try: 
+try:
+    # Check if the file already exists
     dbutils.fs.ls(local_path)
-    dbutils.jobs.taskValues.set(key= "continue_downstream", value="no")
-    print('file already downloaded, aborting downstream tasks')
+
+    # If the file already exists then set continue_downstream to no
+    dbutils.jobs.taskValues.set(key="continue_downstream", value="no")
+    print("File already downloaded, aborting downstream tasks")
 except:
     try:
+        # Construct the URL for the Parquet file corresponding to this month
         url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{formatted_date}.parquet"
-        response = urllib.request.urlopen(url)
-        os.makedirs(dir_path, exist_ok=True)
-        with open(local_path, 'wb') as f:
-            shutil.copyfileobj(response, f)
-        dbutils.jobs.taskValues.set(key="continue_downstream", value="yes")
-        print("File successfuly uploaded in current run") 
-    except Exception as e:
-        dbutils.jobs.taskValues.set(key="continue_downstream", value="no")
-        print(f"file download failed: {str(e)}")
+
+        # Download the file
+        # Create the local directory for this date's data
+        download_file(url, dir_path, local_path)
         
+        # Set continue_downstream to yes if the file was loaded
+        dbutils.jobs.taskValues.set(key="continue_downstream", value="yes")
+        print("File succesfully uploaded in current run")
+    except Exception as e:
+        # Set continue downstream to no if the file was not loaded
+        dbutils.jobs.taskValues.set(key="continue_downstream", value="no")
+        print(f"File download failed: {str(e)}")

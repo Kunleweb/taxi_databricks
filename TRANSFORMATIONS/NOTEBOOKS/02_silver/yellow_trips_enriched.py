@@ -1,15 +1,29 @@
 # Databricks notebook source
+import sys
+import os
+# Go two levels up to reach the project root
+project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
+
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 from datetime import date
-from dateutil.relativedelta import relativedelta 
+from dateutil.relativedelta import relativedelta
+from modules.utils.date_utils import get_month_start_n_months_ago
 
 # COMMAND ----------
 
-two_months_ago_start = date.today().replace(day=1)-relativedelta(months=2)
+# Get the first day of the month two months ago
+two_months_ago_start = get_month_start_n_months_ago(2)
 
 # COMMAND ----------
 
-# Load cleansed trip data and zone lookup tables
-df_trips = spark.read.table("nyctaxi.02_silver.yellow_trips_cleansed").filter(f"tpep_pickup_datetime>'{two_months_ago_start}'")
+# Load cleansed yellow taxi trip data from the Silver layer
+# and filter to only include trips with a pickup datetime
+# later than the start date from two months ago
+df_trips = spark.read.table("nyctaxi.02_silver.yellow_trips_cleansed").filter(f"tpep_pickup_datetime > '{two_months_ago_start}'")
+
+# Load taxi zone lookup data from the Silver layer
 df_zones = spark.read.table("nyctaxi.02_silver.taxi_zone_lookup")
 
 # COMMAND ----------
