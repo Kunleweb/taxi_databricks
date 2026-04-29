@@ -1,49 +1,54 @@
 # Databricks notebook source
-from pyspark.sql.functions import current_timestamp, lit, col
-from pyspark.sql.types import TimestampType, IntegerType 
 from datetime import datetime
-from delta.tables import DeltaTable 
+from delta.tables import DeltaTable
+from pyspark.sql.functions import lit, current_timestamp, col
+from pyspark.sql.types import TimestampType, IntegerType, StringType
 
 # COMMAND ----------
 
-df = spark.read.format('csv').option("header", True).load("/Volumes/nyctaxi/00_landing/data_sources/lookup/taxi_zone_lookup.csv")
+# Read the taxi zone lookup CSV (with header) into a DataFrame
+df = spark.read.format("csv").option("header", True).load("/Volumes/nyctaxi/00_landing/data_sources/lookup/taxi_zone_lookup.csv")
 
 # COMMAND ----------
 
+# Select and rename fields, casting types, and add audit columns
 df = df.select(
-    col("LocationID").cast(IntegerType()).alias('location_id'),
-    col("Borough").alias("borough"),
-    col("Zone").alias("zone"),
-    col("service_zone"), current_timestamp().alias('effective_date'), 
-    lit(None).cast(TimestampType()).alias("end_date"))
+                col("LocationID").cast(IntegerType()).alias("location_id"),
+                col("Borough").alias("borough"),
+                col("Zone").alias("zone"),
+                col("service_zone"),
+                current_timestamp().alias("effective_date"),
+                lit(None).cast(TimestampType()).alias("end_date")
+            )
 
 # COMMAND ----------
 
-#fixed point in time used to close any changed active records, using a python timestamp ensures the exact same value is written 
+# Fixed point-in-time used to "close" any changed active records
+# Using a Python timestamp ensures the exact same value is written and can be referenced if needed
 end_timestamp = datetime.now()
 
-#load the SCD2 deltatable instance 
-dt = DeltaTable.forName(spark, "nyctaxi.`02_silver`.taxi_zone_lookup")
+# Load the SCD2 Delta table
+dt = DeltaTable.forName(spark, "nyctaxi.02_silver.taxi_zone_lookup")
 
 # COMMAND ----------
 
-#pass 1: close any active rows whose tracked attributed changed 
-#match only the active target rows whos end_Date is null with the same business key
-#if any tracked column differs, set end_Date to end_timestamp to retire that version
+# -----------------------------
+# PASS 1: Close any active rows whose tracked attributes changed
+# -----------------------------
+# Match only the *active* target rows (end_date IS NULL) with the same business key.
+# If any tracked column differs, set end_date to end_timestamp to retire that version.
 
-dt.alias('t').merge(
-    source=df.alias('s'),
-    condition = "t.location_id = s.location_id AND t.end_date is NULL and (t.borough !=s.borough or t.zone!=s.zone or t.service_zone != s.service_zone)"  
-).whenMatchedUpdate(
-    set={
-        "t.end_date": lit(end_timestamp).cast(TimestampType())
-    }
-).execute()
-
-
+dt.alias("t").\
+    merge(
+        source    = df.alias("s"),
+        condition = "t.location_id = s.location_id AND t.end_date IS NULL AND (t.borough != s.borough OR t.zone != s.zone OR t.service_zone != s.service_zone)"
+    ).\
+    whenMatchedUpdate(
+        set = { "t.end_date": lit(end_timestamp).cast(TimestampType()) }
+    ).\
+    execute()
 
 # COMMAND ----------
-
 
 # -----------------------------
 # PASS 2: Insert new current versions
@@ -77,24 +82,20 @@ else:
 
 # COMMAND ----------
 
-#pass3: insert brand-new keys (no historical row in target)
-dt.alias('t').merge(
-    source=df.alias('s'),
-    condition= "t.location_id=s.location_id"
-).whenNotMatchedInsert(
-    values={
-                "t.location_id": "s.location_id",
+# -----------------------------
+# PASS 3: Insert brand-new keys (no historical row in target)
+# -----------------------------
+dt.alias("t").\
+    merge(
+        source    = df.alias("s"),
+        condition = "t.location_id = s.location_id"
+    ).\
+    whenNotMatchedInsert(
+        values = { "t.location_id": "s.location_id",
                 "t.borough": "s.borough",
-                "t.zone":"s.zone",
-                "t.service_zone":"s.service_zone",
+                "t.zone": "s.zone",
+                "t.service_zone": "s.service_zone",
                 "t.effective_date": current_timestamp(),
-                "t.end_date": lit(None).cast(TimestampType())
-    }
-).execute()
-
-# COMMAND ----------
-
-df.write.mode('overwrite').saveAsTable('nyctaxi.02_silver.taxi_zone_lookup')
-
-# COMMAND ----------
-
+                "t.end_date": lit(None).cast(TimestampType()) }
+    ).\
+    execute()
