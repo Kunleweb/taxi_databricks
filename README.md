@@ -72,8 +72,8 @@ All catalog names, schema names, table names, volume paths, and source URLs are 
 | `SCHEMA_BRONZE` | `01_bronze` |
 | `SCHEMA_SILVER` | `02_silver` |
 | `SCHEMA_GOLD` | `03_gold` |
-| `YELLOW_TAXI_SOURCE_URL` | NYC TLC CloudFront endpoint |
-| `ZONE_LOOKUP_URL` | NYC TLC misc endpoint |
+| `YELLOW_TAXI_SOURCE_URL` | NYC TLC endpoint |
+| `ZONE_LOOKUP_URL` | NYC TLC Dimension table endpoint |
 
 ---
 
