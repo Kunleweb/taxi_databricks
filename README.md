@@ -1,35 +1,13 @@
 # taxi_databricks
 
-An end-to-end data engineering pipeline that ingests, transforms, and analyses NYC Yellow Taxi trip data on Databricks using a Medallion Architecture (Bronze → Silver → Gold) with Unity Catalog.
+An end-to-end data engineering pipeline that ingests, transforms, and analyses NYC Yellow Taxi trip data on Databricks using a Medallion Architecture with Unity Catalog.
 
 ---
 
 ## Architecture
 
 ```
-NYC TLC (public Parquet/CSV)
-        │
-        ▼
-┌─────────────────────┐
-│  00_landing (Volume)│  Raw files on disk (Parquet / CSV)
-└─────────────────────┘
-        │
-        ▼
-┌─────────────────────┐
-│  01_bronze          │  yellow_trips_raw — raw rows + processed_timestamp
-└─────────────────────┘
-        │
-        ▼
-┌─────────────────────┐
-│  02_silver          │  yellow_trips_cleansed — decoded fields, trip duration
-│                     │  yellow_trips_enriched — joined with taxi zone lookup
-│                     │  taxi_zone_lookup      — SCD2 zone reference table
-└─────────────────────┘
-        │
-        ▼
-┌─────────────────────┐
-│  03_gold            │  daily_trip_summary — daily KPI aggregates
-└─────────────────────┘
+![Pipeline](/img/pipe.png)
 ```
 
 The pipeline runs on a **2-month lag** — a job running in May processes March data. This accounts for the NYC TLC's typical data publication delay.
@@ -39,41 +17,10 @@ The pipeline runs on a **2-month lag** — a job running in May processes March 
 ## Repository structure
 
 ```
-taxi_databricks/
-├── modules/
-│   ├── config.py                   # All catalog, schema, table, URL, and path constants
-│   ├── data_loader/
-│   │   └── file_downloader.py      # Downloads files from remote URLs to Unity Catalog volumes
-│   ├── transformations/
-│   │   └── metadata.py             # Adds processed_timestamp column
-│   └── utils/
-│       └── date_utils.py           # Month boundary helpers
-│
-├── transformations/
-│   └── notebooks/
-│       ├── bootstrap.py            # %run this to add project root to sys.path
-│       ├── 00_landing/
-│       │   ├── ingest_yellow_trips.py   # Download monthly Parquet from NYC TLC
-│       │   └── ingest_lookup.py         # Download taxi zone CSV
-│       ├── 01_bronze/
-│       │   └── yellow_trips_raw.py      # Load Parquet → Bronze Delta table
-│       ├── 02_silver/
-│       │   ├── yellow_trips_cleansed.py # Decode fields, compute trip duration
-│       │   ├── yellow_trips_enriched.py # Join with zone lookup → borough/zone names
-│       │   └── taxi_zone_lookup.py      # SCD2 upsert for zone reference data
-│       └── 03_gold/
-│           └── daily_trip_summary.py    # Daily trip KPI aggregates
-│
-├── one_off/                        # One-time setup and historical backfill scripts
-│   ├── creating_catalogs_schema_volumes.py
-│   ├── load_zone_lookup.py
-│   └── initial_load/
-│       └── notebooks/              # Bulk-load notebooks for historical data
-│
-├── adhoc/
-│   └── Yellow_taxi_Eda.py          # Exploratory analysis notebook
-│
-└── setup.py                        # Makes modules/ installable as a package
+modules/          Reusable Python code
+transformations/  Databricks notebooks organised by medallion layer
+one_off/          Setup and backfill scripts
+adhoc/            Exploratory analysis 
 ```
 
 ---
@@ -111,17 +58,7 @@ Alternatively, every production notebook already calls `%run ../bootstrap` which
 
 The production notebooks in `transformations/notebooks/` are designed to run as a **Databricks Job** with dependent tasks in this order:
 
-| Step | Notebook | Description |
-|------|----------|-------------|
-| 1 | `00_landing/ingest_yellow_trips` | Download monthly Parquet; sets `continue_downstream` task value |
-| 2 | `00_landing/ingest_lookup` | Download zone CSV; sets `continue_downstream` task value |
-| 3 | `01_bronze/yellow_trips_raw` | Load Parquet to Bronze |
-| 4 | `02_silver/yellow_trips_cleansed` | Decode and cleanse trips |
-| 5 | `02_silver/taxi_zone_lookup` | SCD2 upsert for zone reference |
-| 6 | `02_silver/yellow_trips_enriched` | Enrich trips with borough/zone names |
-| 7 | `03_gold/daily_trip_summary` | Aggregate to daily KPIs |
-
-Steps 3–7 only run if step 1 sets `continue_downstream = "yes"`. If the file for the target month was already downloaded in a prior run, the job exits early without duplicating data.
+![Jobs](/img/Jobs.png)
 
 ---
 
