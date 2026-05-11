@@ -6,9 +6,8 @@ An end-to-end data engineering pipeline that ingests, transforms, and analyses N
 
 ## Architecture
 
-```
 ![Pipeline](img/pipe.png)
-```
+
 
 The pipeline runs on a **2-month lag** — a job running in May processes March data. This accounts for the NYC TLC's typical data publication delay.
 
