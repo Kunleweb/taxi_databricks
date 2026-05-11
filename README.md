@@ -7,7 +7,7 @@ An end-to-end data engineering pipeline that ingests, transforms, and analyses N
 ## Architecture
 
 ```
-![Pipeline](/img/pipe.png)
+![Pipeline](img/pipe.png)
 ```
 
 The pipeline runs on a **2-month lag** — a job running in May processes March data. This accounts for the NYC TLC's typical data publication delay.
@@ -58,7 +58,7 @@ Alternatively, every production notebook already calls `%run ../bootstrap` which
 
 The production notebooks in `transformations/notebooks/` are designed to run as a **Databricks Job** with dependent tasks in this order:
 
-![Jobs](/img/Jobs.png)
+![Jobs](img/Jobs.png)
 
 ---
 
