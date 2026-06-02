@@ -1,6 +1,6 @@
 # taxi_databricks
 
-An end-to-end data engineering pipeline that ingests, transforms, and analyses NYC Yellow Taxi trip data on Databricks using a Medallion Architecture with Unity Catalog.
+NYC Yellow Taxi trip data on Databricks using a Medallion Architecture with Unity Catalog.
 
 ---
 
