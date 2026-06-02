@@ -9,7 +9,7 @@ NYC Yellow Taxi trip data on Databricks using a Medallion Architecture with Unit
 ![Pipeline](img/pipe.png)
 
 
-The pipeline runs on a **2-month lag** — a job running in May processes March data. This accounts for the NYC TLC's typical data publication delay.
+The pipeline runs on a **2-month lag** - a job running in May processes March data. This accounts for the NYC TLC's typical data publication delay.
 
 ---
 
@@ -36,7 +36,7 @@ adhoc/            Exploratory analysis
 
 Run these notebooks **once** in order from the `one_off/` directory:
 
-1. **`creating_catalogs_schema_volumes.py`** — Creates the `nyctaxi` catalog, four schemas (`00_landing`, `01_bronze`, `02_silver`, `03_gold`), and the landing volume.
+1. **`creating_catalogs_schema_volumes.py`** - Creates the `nyctaxi` catalog, four schemas (`00_landing`, `01_bronze`, `02_silver`, `03_gold`), and the landing volume.
 2. **`load_zone_lookup.py`** — Downloads the taxi zone CSV into the landing volume.
 3. **`initial_load/notebooks/`** — Runs the full pipeline over 6 months of historical data (Sept 2025 – Feb 2026) to seed all tables.
 
@@ -49,7 +49,7 @@ To avoid any `sys.path` issues, install the project as a package on your cluster
 %pip install -e /Workspace/path/to/taxi_databricks
 ```
 
-Alternatively, every production notebook already calls `%run ../bootstrap` which walks the directory tree to find and register the project root automatically — no manual setup required.
+Alternatively, every production notebook already calls `%run ../bootstrap` which walks the directory tree to find and register the project root automatically - no manual setup required.
 
 ---
 
@@ -63,7 +63,7 @@ The production notebooks in `transformations/notebooks/` are designed to run as 
 
 ## Configuration
 
-All catalog names, schema names, table names, volume paths, and source URLs are defined in a single file — [`modules/config.py`](modules/config.py). To point the pipeline at a different catalog or environment, edit only that file.
+All catalog names, schema names, table names, volume paths, and source URLs are defined in a single file - [`modules/config.py`](modules/config.py). To point the pipeline at a different catalog or environment, edit only that file.
 
 | Constant | Default value |
 |----------|---------------|
@@ -79,5 +79,5 @@ All catalog names, schema names, table names, volume paths, and source URLs are 
 
 ## Data sources
 
-- **Yellow trip data**: [NYC TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) — monthly Parquet files
-- **Taxi zone lookup**: CSV mapping `LocationID` → Borough, Zone, Service Zone
+- **Yellow trip data**: [NYC TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) - monthly Parquet files
+- **Taxi zone lookup**: CSV mapping `LocationID` : Borough, Zone, Service Zone
